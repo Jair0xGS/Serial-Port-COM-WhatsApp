@@ -331,6 +331,7 @@
             this.flowLayoutPanel1.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(229)))), ((int)(((byte)(221)))), ((int)(((byte)(213)))));
             this.flowLayoutPanel1.BackgroundImage = global::winproySerialPort.Properties.Resources.imageonline_co_brightnessadjusted__7_;
             this.flowLayoutPanel1.Location = new System.Drawing.Point(81, 58);
+            this.flowLayoutPanel1.MinimumSize = new System.Drawing.Size(594, 0);
             this.flowLayoutPanel1.Name = "flowLayoutPanel1";
             this.flowLayoutPanel1.Size = new System.Drawing.Size(762, 394);
             this.flowLayoutPanel1.TabIndex = 15;
@@ -351,6 +352,7 @@
             this.Controls.Add(this.panel2);
             this.Controls.Add(this.panel1);
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.MinimumSize = new System.Drawing.Size(697, 0);
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Guevara Segura Jair";

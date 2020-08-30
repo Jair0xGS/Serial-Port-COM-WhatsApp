@@ -27,7 +27,8 @@ namespace winproySerialPort
         bool puertoIsOpen = true;
         ProgressBar barraDePrueba1;
         ProgressBar barraDePrueba2;
-        private int location = 0;
+        private int padding = 230;
+
         
         public Form1()
         {
@@ -51,6 +52,22 @@ namespace winproySerialPort
             flowLayoutPanel1.HorizontalScroll.Visible = false;
             flowLayoutPanel1.AutoScrollPosition = new Point(0, 0);
             flowLayoutPanel1.VerticalScroll.Maximum = 375;
+
+            flowLayoutPanel1.SizeChanged += new EventHandler((object obj, EventArgs args)=> {
+                Console.WriteLine(flowLayoutPanel1.Size);
+                for (int i = 0; i < flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray().Length; i++)
+                {
+                    //Console.WriteLine(i.ToString() + ":" + flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name);
+                    if (flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name.StartsWith("saliente"))
+                    {
+                        ref FlowLayoutPanel wi = ref flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i];
+                        padding = flowLayoutPanel1.Size.Width - 530;
+                        wi.Margin = new Padding(padding,0,10,5);
+
+
+                    }
+                }
+            });
             
         }
 
@@ -609,8 +626,8 @@ namespace winproySerialPort
             l2.Text = date2.ToString("hh:mm");
             l2.Margin = new Padding(10, 10, 3, 0);
 
-            p1.Margin = new Padding(270, 5, 10, 5);
-            
+            p1.Margin = new Padding(padding, 0, 10, 5);
+            p1.Name = "saliente" ;
             p1.Controls.Add(l1);
             p1.Controls.Add(l2);
             p1.Height = 43 + l1.Height;
@@ -700,7 +717,7 @@ namespace winproySerialPort
             l2.Text = date2.ToString("hh:mm");
             l2.Margin = new Padding(10, 10, 3, 0);
 
-            p1.Margin = new Padding(270, 5, 10, 5);
+            p1.Margin = new Padding(padding, 5, 10, 5);
 
             p1.Controls.Add(l1);
             p1.Controls.Add(pb1);
@@ -743,7 +760,7 @@ namespace winproySerialPort
                         if (wi.Value >= wi.Maximum- 100000)
                         {
                             wi.Visible = false;
-                            wi.Name = "noSeUsaraMasxx";
+                            wi.Name = "salientenoSeUsaraMasxx";
                         }
                     }
 
