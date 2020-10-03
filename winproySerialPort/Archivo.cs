@@ -79,14 +79,14 @@ namespace winproySerialPort
         {
             return directorioDeGuardado + "\\" + name;
         }
-        public void insertarBytes(int orden, byte[] mensaje)
+        public async void insertarBytes(int orden, byte[] mensaje)
         {
             //rwl.AcquireWriterLock(10);
-            using (var fs = new FileStream(directorioDeGuardado+"\\"+name, FileMode.OpenOrCreate, FileAccess.Write))
+             using  (var fs = new FileStream(directorioDeGuardado+"\\"+name, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write, bufferSize: 4096, useAsync: true))
             {
                 
                 fs.Position = (orden-1)*1014;
-                fs.Write(mensaje, 0, mensaje.Length);
+                await fs.WriteAsync(mensaje, 0, mensaje.Length);
             }
             
             

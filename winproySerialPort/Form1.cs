@@ -20,16 +20,16 @@ namespace winproySerialPort
         MostrarOtroProceso delegadoMostrar;
         MostrarOtroProceso delegadoMostrar1;
         MostrarOtroProceso delegadoMostrarArchivo;
-        Thread enviaArchivo;
         String com = "COM1";
-        int velocidad = 57600;
+        int velocidad = 256000;
         String directorioDeGuardado;
         bool puertoIsOpen = true;
-        ProgressBar barraDePrueba1;
-        ProgressBar barraDePrueba2;
         private int padding = 230;
 
-        
+        List<int> identificadoresDisponibles= new List<int>();
+        List<int> idenNoDisponibles =  new List<int>();
+        List<int> identificadoresDisponiblesM = new List<int>();
+        List<int> idenNoDisponiblesM = new List<int>();
         public Form1()
         {
             
@@ -73,45 +73,30 @@ namespace winproySerialPort
 
        
 
-
+        
         private void btnEnviar_Click(object sender, EventArgs e)
         {
-            instancia.Enviar(rchMensajes.Text.Trim(), "Mensaje");
+            //escribirAchivoConHilos();
+
+            
+            instancia.Enviar(rchMensajes.Text.Trim(), "Mensaje", identificadoresDisponiblesM.ElementAt(0));
+            idenNoDisponiblesM.Add(identificadoresDisponiblesM.ElementAt(0));
+            identificadoresDisponiblesM.Remove(0);
             nuevoMensajeSaliente(rchMensajes.Text.Trim());
             //guardarMensajeSaliente();
             rchMensajes.Text = "Escriba su mensaje aqui...";
 
 
-
-
         }
         public void guardarMensajeSaliente(string mensaje)
         {
-            //rchConversacion.SelectionAlignment = HorizontalAlignment.Right;
-            //rchConversacion.SelectionFont = new Font("Tahoma", 10);
-            //rchConversacion.SelectionBackColor = Color.FromArgb(220, 248, 198);
-            //rchConversacion.SelectedText = mensaje + "\n";
-            //DateTime date2 = DateTime.Now;
-            //rchConversacion.SelectionBackColor = Color.FromArgb(220, 248, 198);
-            //rchConversacion.SelectionColor = Color.Gray;
-            //rchConversacion.SelectedText = date2.ToString("hh:mm") + " \n";
+
 
         }
         public void guardarMensajeEntrante(string mensaje)
 
         {
             nuevoMensajeEntrante(mensaje);
-            //rchConversacion.SelectionFont = new Font("Tahoma", 10);
-            //rchConversacion.SelectionBackColor = Color.White;
-            //rchConversacion.SelectionColor = Color.Black;
-            //rchConversacion.SelectedText = mensaje + new string(' ', 80) + "\n";
-            //
-            //
-            //rchConversacion.SelectionBackColor = Color.White;
-            //rchConversacion.SelectionColor = Color.Gray;
-            //rchConversacion.SelectionAlignment = HorizontalAlignment.Left;
-            //DateTime date1 = DateTime.Now;
-            //rchConversacion.SelectedText = date1.ToString("hh:mm") + new string(' ', 89) + " \n";
         }
 
         //cuando se carga el form
@@ -145,8 +130,14 @@ namespace winproySerialPort
                 }
             }
 
+            for (int i = 0; i < 16; i++)
+            {
+                identificadoresDisponibles.Add(i + 1);
+                identificadoresDisponiblesM.Add(i + 1);
+            }
+            Console.WriteLine(identificadoresDisponiblesM.ElementAt(0));
+            
 
-           
             instancia.LlegoMensaje += new classTransRecep.HandlerIO(instancia_LlegoMensaje);
             instancia.LlegoArchivo += new classTransRecep.HandlerIO(instancia_LlegoArchivo);
             delegadoMostrar = new MostrarOtroProceso(MostrarMensaje);
@@ -219,7 +210,18 @@ namespace winproySerialPort
         private void MostrarMensaje(string mensaje)
         {
             //rchConversacion.Text = '\n' + mensaje;
+
+            //get el promer char de la cadena q sera el identificador
+            int identificador = Convert.ToInt32( mensaje.Substring(0,2));
+            mensaje = mensaje.Substring(2);
             guardarMensajeEntrante(mensaje);
+
+            //asignar identificador sacado de cadena a este identificador
+            
+
+            identificadoresDisponiblesM.Add(identificador);
+            idenNoDisponiblesM.Remove(identificador);
+
         }
         private void MostrarArchivo(string path)
         {
@@ -509,64 +511,42 @@ namespace winproySerialPort
 
         private void btnAdjuntar_Click(object sender, EventArgs e)
         {
-            //MessageBox.Show("cklic");
+           
             timer1.Start();
         }
-        private int contadorArchivos = 0;
         private void btnImagen_Click(object sender, EventArgs e)
         {
             seleccionaArchivo.Filter = "Imagenes(*.BMP;*.JPG;*.GIF)|*.BMP;*.JPG;*.GIF";
+            enviaTodosEnLista();
+        }
+        public void enviaTodosEnLista()
+        {
             if (seleccionaArchivo.ShowDialog() == DialogResult.OK)
             {
-                if (seleccionaArchivo.FileNames.Length <= 16)
+                if (seleccionaArchivo.FileNames.Length <= identificadoresDisponibles.Count)
                 {
+
                     foreach (String nombreArchivo in seleccionaArchivo.FileNames)
                     {
-                        instancia.Enviar(nombreArchivo, "Archivo");
-                        nuevoArchivoSaliente(nombreArchivo, contadorArchivos);
-                        contadorArchivos += 1;
-                        if (contadorArchivos == 16)
-                        {
-                            contadorArchivos = 0;
-                        }
+                        Console.WriteLine("comenzando nuevo arhcivo");
+                        instancia.Enviar(nombreArchivo, "Archivo", identificadoresDisponibles.ElementAt(0));
+                        nuevoArchivoSaliente(nombreArchivo, identificadoresDisponibles.ElementAt(0));
+                        idenNoDisponibles.Add(identificadoresDisponibles.ElementAt(0));
+                        identificadoresDisponibles.RemoveAt(0);
                     }
-                   
                 }
                 else
                 {
                     notificameWarning("Muchos archivos Seleccionados", "solo puedes enviar 16 archivos a la vez");
                 }
 
-
             }
         }
-        
 
         private void btnArchivo_Click(object sender, EventArgs e)
         {
             seleccionaArchivo.Filter = "Todos los archivos(*.*)|*.*";
-            if (seleccionaArchivo.ShowDialog() == DialogResult.OK)
-            {
-                if(seleccionaArchivo.FileNames.Length <= 16)
-                {
-                    foreach (String nombreArchivo in seleccionaArchivo.FileNames)
-                    {
-                        Console.WriteLine("comenzando nuevo arhcivo");
-                        instancia.Enviar(nombreArchivo, "Archivo");
-                        nuevoArchivoSaliente(nombreArchivo, contadorArchivos);
-                        contadorArchivos += 1;
-                        if (contadorArchivos == 16)
-                        {
-                            contadorArchivos = 0;
-                        }
-                    }
-                }
-                else
-                {
-                    notificameWarning("Muchos archivos Seleccionados", "solo puedes enviar 16 archivos a la vez");
-                }
-                
-            }
+            enviaTodosEnLista();
         }
 
         private void btnDirectorio_Click(object sender, EventArgs e)
@@ -579,165 +559,121 @@ namespace winproySerialPort
         }
         public void nuevoMensajeEntrante(string text)
         {
+            
+            addPanel(text, 11, -1);
+        }
+        public void addPanel(string text,int tipo,int contador)
+        {
             FlowLayoutPanel p1 = new FlowLayoutPanel();
-            p1.BackColor = Color.White;
+            p1.Width = 500;
             Label l1 = new Label();
             Label l2 = new Label();
-            p1.Width = 500;
-            l1.Text = text;
             l1.MinimumSize = new Size(480, 0);
+            l1.Font = new Font("Lucida Sans", 9.75f);
+
             l1.Margin = new Padding(10, 10, 3, 0);
             DateTime date2 = DateTime.Now;
+            l1.Text = text;
             l1.AutoSize = true;
             l2.MinimumSize = new Size(480, 0);
-            l2.TextAlign = ContentAlignment.MiddleRight;
             l2.ForeColor = Color.FromArgb(193, 193, 193);
             l2.Text = date2.ToString("hh:mm");
             l2.Margin = new Padding(10, 10, 3, 0);
 
-            
-            p1.Margin = new Padding(10, 5, 3, 5);
-            p1.Controls.Add(l1);
-            p1.Controls.Add(l2);
-            Console.WriteLine("label height :"+ l1.Height.ToString());
-            Console.WriteLine("panel height :" + p1.Height.ToString());
-            p1.Height = 43 + l1.Height;
-            Console.WriteLine("panel height 2:" + p1.Height.ToString());
+            int cantidadParaAumentar = 43;
 
+            ProgressBar pb1 = new ProgressBar();
+
+
+            if (tipo == 11)//mensaje entrante
+            {
+                p1.BackColor = Color.White;
+                p1.Margin = new Padding(10, 5, 3, 5);
+            }
+            else if(tipo ==12)//mensaje saliente
+            {
+                p1.Name = "saliente";
+                p1.BackColor = Color.FromArgb(220, 248, 198);
+                l2.TextAlign = ContentAlignment.MiddleRight;
+                l1.TextAlign = ContentAlignment.MiddleRight;
+                p1.Margin = new Padding(padding, 0, 10, 5);
+            }
+            else
+            {
+                
+                pb1.Maximum = 16777215;
+
+
+                pb1.Height = 10;
+                pb1.MinimumSize = new Size(480, 0);
+                pb1.Margin = new Padding(10, 10, 3, 0);
+
+                if (tipo == 21)//archivo entrante
+                {
+                    p1.BackColor = Color.White;
+                    p1.Margin = new Padding(10, 5, 3, 5);
+                    p1.Name = "entrante" + contador.ToString();
+                    cantidadParaAumentar = 63;
+                    l1.ForeColor = Color.Blue;
+
+                }
+                else if(tipo ==22)//archiuvo saliente
+                {
+                    p1.BackColor = Color.FromArgb(220, 248, 198);
+                    l2.TextAlign = ContentAlignment.MiddleRight;
+                    l1.ForeColor = Color.Blue;
+                    l1.TextAlign = ContentAlignment.MiddleRight;
+                    p1.Name = "saliente" + contador.ToString();
+                    p1.Margin = new Padding(padding, 0, 10, 5);
+                    //evetos para q se abra el archivo compartido para verse cuando se hace click en el panel
+                    p1.Click += new EventHandler((object obj, EventArgs args) => {
+
+                        System.Diagnostics.Process.Start(l1.Text);
+                    });
+                    l1.Click += new EventHandler((object obj, EventArgs args) => {
+
+                        System.Diagnostics.Process.Start(l1.Text);
+                    });
+                    l2.Click += new EventHandler((object obj, EventArgs args) => {
+
+                        System.Diagnostics.Process.Start(l1.Text);
+                    });
+                }
+            }
+            p1.Controls.Add(l1);
+            if(tipo == 22 || tipo == 21)
+            {
+                p1.Controls.Add(pb1);
+            }
+            p1.Controls.Add(l2);
+            p1.Height = cantidadParaAumentar + l1.Height;
             flowLayoutPanel1.Controls.Add(p1);
+            int max = flowLayoutPanel1.VerticalScroll.Maximum;
+            flowLayoutPanel1.VerticalScroll.Value = max;
+
+
+            Console.WriteLine("vertical value :" + flowLayoutPanel1.VerticalScroll.Value);
+            Console.WriteLine("vertical max:" + max);
+            flowLayoutPanel1.VerticalScroll.Value = max;
+
+
+            Console.WriteLine("vertical value :" + flowLayoutPanel1.VerticalScroll.Value);
+            Console.WriteLine("vertical max:" + max);
         }
         public void nuevoMensajeSaliente(string text)
         {
-            FlowLayoutPanel p1 = new FlowLayoutPanel();
-            p1.BackColor = Color.FromArgb(220, 248, 198);
-            p1.Width = 500;
-            Label l1 = new Label();
-            Label l2 = new Label();
+            addPanel(text, 12, -1);
             
-            l1.MinimumSize = new Size(480, 0);
-            l1.Margin = new Padding(10, 10, 3, 0);
-            DateTime date2 = DateTime.Now;
-            l1.Text = text; 
-            l1.AutoSize = true;
-            l1.TextAlign = ContentAlignment.MiddleRight;
-            l2.MinimumSize = new Size(480, 0);
-            l2.TextAlign = ContentAlignment.MiddleRight;
-            l2.ForeColor = Color.FromArgb(193, 193, 193);
-            l2.Text = date2.ToString("hh:mm");
-            l2.Margin = new Padding(10, 10, 3, 0);
-
-            p1.Margin = new Padding(padding, 0, 10, 5);
-            p1.Name = "saliente" ;
-            p1.Controls.Add(l1);
-            p1.Controls.Add(l2);
-            p1.Height = 43 + l1.Height;
-            flowLayoutPanel1.Controls.Add(p1);
         }
         public void nuevoArchivoEntrante(string text, int contador)
         {
-            FlowLayoutPanel p1 = new FlowLayoutPanel();
-            p1.BackColor = Color.White;
-            LinkLabel l1 = new LinkLabel();
-            ProgressBar pb1 = new ProgressBar();
-            Label l2 = new Label();
-            p1.Width = 500;
-
-            pb1.Maximum = 16777215;
-
+            addPanel(text, 21, contador);
             
-            pb1.Height = 10;
-            pb1.MinimumSize = new Size(480, 0);
-            pb1.Margin=new Padding(10, 10, 3, 0);
-
-            Console.WriteLine("name en funcion q crea "+pb1.Name);
-
-            l1.Text = text;
-            l1.MinimumSize = new Size(480, 0);
-            l1.Margin = new Padding(10, 10, 3, 0);
-            DateTime date2 = DateTime.Now;
-            l1.AutoSize = true;
-            l2.MinimumSize = new Size(480, 0);
-            l2.TextAlign = ContentAlignment.MiddleRight;
-            l2.ForeColor = Color.FromArgb(193, 193, 193);
-            l2.Text = date2.ToString("hh:mm");
-            l2.Margin = new Padding(10, 10, 3, 0);
-
-            p1.Name = "entrante"+contador.ToString();
-            p1.Margin = new Padding(10, 5, 3, 5);
-            p1.Controls.Add(l1);
-            p1.Controls.Add(pb1);
-            p1.Controls.Add(l2);
-            Console.WriteLine("label height :" + l1.Height.ToString());
-            Console.WriteLine("panel height :" + p1.Height.ToString());
-            p1.Height = 63 + l1.Height;
-            Console.WriteLine("panel height 2:" + p1.Height.ToString());
-            //evetos para q se abra el archivo compartido para verse cuando se hace click en el panel
-            p1.Click += new EventHandler((object obj, EventArgs args) => {
-
-                System.Diagnostics.Process.Start(l1.Text);
-            });
-            l1.Click += new EventHandler((object obj, EventArgs args) => {
-
-                System.Diagnostics.Process.Start(l1.Text);
-            });
-            l2.Click += new EventHandler((object obj, EventArgs args) => {
-
-                System.Diagnostics.Process.Start(l1.Text);
-            });
-
-            flowLayoutPanel1.Controls.Add(p1);
         }
         private void  nuevoArchivoSaliente(string text, int contador )
         {
-            FlowLayoutPanel p1 = new FlowLayoutPanel();
-            ProgressBar pb1 = new ProgressBar();
-            p1.BackColor = Color.FromArgb(220, 248, 198);
-            p1.Width = 500;
-            LinkLabel l1 = new LinkLabel();
-            Label l2 = new Label();
-
-
-            p1.Name = "saliente"+contador.ToString();
-            pb1.Maximum = 16777215;
-
+            addPanel(text, 22, contador);
             
-            pb1.Height = 10;
-            pb1.MinimumSize = new Size(480, 0);
-            pb1.Margin = new Padding(10, 10, 3, 0);
-
-            l1.MinimumSize = new Size(480, 0);
-            l1.Margin = new Padding(10, 10, 3, 0);
-            DateTime date2 = DateTime.Now;
-            l1.Text = text;
-            l1.AutoSize = true;
-            l1.TextAlign = ContentAlignment.MiddleRight;
-            l2.MinimumSize = new Size(480, 0);
-            l2.TextAlign = ContentAlignment.MiddleRight;
-            l2.ForeColor = Color.FromArgb(193, 193, 193);
-            l2.Text = date2.ToString("hh:mm");
-            l2.Margin = new Padding(10, 10, 3, 0);
-
-            p1.Margin = new Padding(padding, 5, 10, 5);
-
-            p1.Controls.Add(l1);
-            p1.Controls.Add(pb1);
-            p1.Controls.Add(l2);
-            p1.Height = 43 + l1.Height;
-
-            //evetos para q se abra el archivo compartido para verse cuando se hace click en el panel
-            p1.Click += new EventHandler((object obj,EventArgs args)=> {
-
-                System.Diagnostics.Process.Start(l1.Text);
-            });
-            l1.Click += new EventHandler((object obj, EventArgs args) => {
-
-                System.Diagnostics.Process.Start(l1.Text);
-            });
-            l2.Click += new EventHandler((object obj, EventArgs args) => {
-
-                System.Diagnostics.Process.Start(l1.Text);
-            });
-            flowLayoutPanel1.Controls.Add(p1);
         }
         private void label4_Click(object sender, EventArgs e)
         {
@@ -752,6 +688,7 @@ namespace winproySerialPort
                 //Console.WriteLine(i.ToString() + ":" + flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name);
                 if(flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name == "saliente" + identificador.ToString())
                 {
+                    
                     ref ProgressBar  wi= ref flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Controls.OfType<ProgressBar>().ToArray()[0];
                     if (wi.Visible)
                     {
@@ -761,6 +698,8 @@ namespace winproySerialPort
                         {
                             wi.Visible = false;
                             wi.Name = "salientenoSeUsaraMasxx";
+                            idenNoDisponibles.Remove(identificador);
+                            identificadoresDisponibles.Add(identificador);
                         }
                     }
 
@@ -776,6 +715,7 @@ namespace winproySerialPort
                 //Console.WriteLine(i.ToString() + ":" + flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name);
                 if (flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name == "entrante" + identificador.ToString())
                 {
+                    
                     ref ProgressBar wi = ref flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Controls.OfType<ProgressBar>().ToArray()[0];
                     if (wi.Visible)
                     {
@@ -785,6 +725,22 @@ namespace winproySerialPort
                         {
                             wi.Visible = false;
                             wi.Name = "noSeUsaraMasxx";
+                            ref Label lb = ref flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Controls.OfType<Label>().ToArray()[0];
+                            string dir = lb.Text;
+                            ref Label lb2 = ref flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Controls.OfType<Label>().ToArray()[1];
+                            flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Click += new EventHandler((object obj, EventArgs args) => {
+
+                                System.Diagnostics.Process.Start(dir);
+                            });
+                            lb.Click += new EventHandler((object obj, EventArgs args) => {
+
+                                System.Diagnostics.Process.Start(dir);
+                            });
+                            lb2.Click += new EventHandler((object obj, EventArgs args) => {
+
+                                System.Diagnostics.Process.Start(dir);
+                            });
+
                         }
                     }
                     
@@ -794,14 +750,7 @@ namespace winproySerialPort
         }
         private void btnCambiaTextr_Click(object sender, EventArgs e)
         {
-            //ad salinte
-            //labelTest.Text = inputText.Text;
-            //flowPanelTest.Height = 43 + labelTest.Height;
-
-            //nuevoMensajeSaliente(inputText.Text);
-
             
-            //flowLayoutPanel1.VerticalScroll.Value += 53;
         }
 
         private void label4_Click_1(object sender, EventArgs e)
@@ -821,13 +770,12 @@ namespace winproySerialPort
 
         private void button2_Click(object sender, EventArgs e)
         {
-            //nuevoMensajeEntrante(inputText.Text);
+            
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-
-            
+                    
         }
 
         private void button4_Click(object sender, EventArgs e)
@@ -847,43 +795,12 @@ namespace winproySerialPort
 
         private void button7_Click(object sender, EventArgs e)
         {
-            for (int i = 0; i < flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray().Length; i++)
-            {
-                Console.WriteLine(i.ToString() + ":" + flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name);
-                Console.WriteLine("para condicion");
-                if (flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name == "dude")
-                {
-                    Console.WriteLine("entro");
-                    ref ProgressBar barraDePruebaDude = ref flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Controls.OfType<ProgressBar>().ToArray()[0];
-                    Console.WriteLine("the value is ", barraDePruebaDude.Value.ToString());
-
-                    barraDePruebaDude.Value += 10; Console.WriteLine("the value is " + barraDePruebaDude.Value.ToString());
-                    
-
-                }
-            }
-            ;
+            
         }
 
         private void button8_Click(object sender, EventArgs e)
         {
-            for (int i = 0; i < flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray().Length; i++)
-            {
-                Console.WriteLine(i.ToString() + ":" + flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name);
-                Console.WriteLine("para condicion");
-                if (flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Name == "dude")
-                {
-                    Console.WriteLine("entro");
-                    ref ProgressBar barraDePruebaDude = ref flowLayoutPanel1.Controls.OfType<FlowLayoutPanel>().ToArray()[i].Controls.OfType<ProgressBar>().ToArray()[0];
-                    Console.WriteLine("the value is ", barraDePruebaDude.Value.ToString());
-
-                    
-                    barraDePruebaDude.Value -= 10; Console.WriteLine("the value is " + barraDePruebaDude.Value.ToString());
-                    
-
-                }
-            }
-            ;
+            
         }
     }
 }

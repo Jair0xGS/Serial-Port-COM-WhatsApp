@@ -28,12 +28,9 @@ namespace winproySerialPort
         public event HandlerIO LlegoArchivo;
         Thread procesoVerificaSalida;
         private SerialPort puerto;
-        List<Task> taskList = new List<Task>();
+        //List<Task> taskList = new List<Task>();
         public string directorioDeGuardado { set; get; }
         private string mensRecibido;
-        private string nombreArchivoRecibido;
-        private string pathArchivoRecibido;
-        private int porcentajeAvanzeArchivo;
         long tamañoMaximoMensajeDeTrama = 1014;
         private Boolean bufferVacio;
         byte[] TramaDeRelleno;
@@ -42,16 +39,11 @@ namespace winproySerialPort
 
         List<Mensaje> mensajes;
         List<Archivo> archivos;
-        private int  contadorIDsMensajes ;
-        private volatile int contadorIDsArchivos;
-        private volatile int contadorIDsArchivosEntrantes;
         public classTransRecep(string dir)
         {
             directorioDeGuardado = dir;
             TramaDeRelleno      = new byte[1024];
             TramaRecibida = new byte[1024];
-            contadorIDsMensajes = 0;
-            contadorIDsArchivos = 0; contadorIDsArchivosEntrantes = 0;
              mensajes = new List<Mensaje>();
             archivos = new List<Archivo>();
             for (int i = 0; i < 1023; i++)
@@ -93,32 +85,16 @@ namespace winproySerialPort
                  
 
                 Trama recibida =new Trama(TramaRecibida);
-                //MessageBox.Show("trama recibida:\n" + recibida.getStringCabezeraPartes());
-                var allTask = Task.WhenAll(taskList.ToArray());
                 switch (recibida.getTipo())
                 {
                     //mensaje
                     case 0xb:
-
-                        //MessageBox.Show("trama mensaje info:\n" +mensajes[0].getInfo());
-                        
-                        if (allTask.IsCompleted)
-                        {
-                            taskList.Add(Task.Factory.StartNew(() => recibiendoMensaje(recibida)));
-                        }
-                        
-
-                        //procesoRecibirMensaje = new Thread(recibiendoMensaje);
-                        //procesoRecibirMensaje.Start();
+                        Task.Factory.StartNew(() => recibiendoMensaje(recibida));
                         break;
                     //archivo
                     case 0xa:
-                        //MessageBox.Show(recibida.getOrdenInt().ToString());
-                        if (allTask.IsCompleted)
-                        {
-                            taskList.Add(Task.Factory.StartNew(() => recibiendoArchivo(recibida)));
-                        }
-                        ;
+                        
+                        Task.Factory.StartNew(() => recibiendoArchivo(recibida));
                         break;
                     //informacion
                     case 0xf:
@@ -126,7 +102,6 @@ namespace winproySerialPort
                         {
                             //informacion de mensajes
                             mensajes.Add(new Mensaje(recibida.getIdentificador(), recibida.getNumeroPartes()));
-                            //MessageBox.Show("trama ifo mensaje :\n" + mensajes[0].getInfo());
                         }
                         else
                         {
@@ -149,17 +124,15 @@ namespace winproySerialPort
 
                
             }
-            //MessageBox.Show(mensRecibido);
         }
 
-        public void recibirInformacion()
-        {
-            //string header
-        }
+
         public void recibiendoArchivo(Trama recibida)
         {
-            foreach (var item in archivos)
+            int tamaño = archivos.ToArray().Length;
+            for (var i = 0; i< tamaño; i++)
             {
+                Archivo item = archivos.ToArray()[i];
                 if (!item.getEstaLleno())
                 {
 
@@ -175,10 +148,9 @@ namespace winproySerialPort
                         if (item.getEstaLleno())
                         {
                             
-                            pathArchivoRecibido = item.getFullPath();
+                            
                             item.identificador = 555;
-                            //onLlegoArchivo("",item.getPorcentajeDeAvance().ToString(),item.getIdentificador().ToString(),"21");
-                            //onLlegoMensaje();
+                            
 
                         }
                     }
@@ -200,8 +172,9 @@ namespace winproySerialPort
                         if (item.getEstaLleno())
                         {
                             mensRecibido = item.getMensajeCompleto();
+                            
+                            onLlegoMensaje(item.identificador);
                             item.identificador = 777;
-                            onLlegoMensaje();
 
                         }
                     }
@@ -209,12 +182,11 @@ namespace winproySerialPort
             }
             
         }
-        protected virtual void onLlegoMensaje()
+        protected virtual void onLlegoMensaje(int iden)
         {
             if (LlegoMensaje != null)
             {
-                //MessageBox.Show("ejecutando on llego mensaje");
-                LlegoMensaje(this, mensRecibido);
+                LlegoMensaje(this, new String('0',2-iden.ToString().Length) + iden.ToString() + mensRecibido);
 
             }
 
@@ -229,46 +201,18 @@ namespace winproySerialPort
 
         }
 
-        public void Enviar(string mens,string tipoM)
+        public void Enviar(string mens,string tipoM,int contador)
         {
             if(tipoM == "Mensaje")
             {
-
-                //procesoEnvio = new Thread(Enviando);
-                int copia = contadorIDsMensajes;
-                Task.Factory.StartNew(() => EnviandoMensaje(mens, copia));
-                
-                //procesoEnvio.Start(mens);
-                if (contadorIDsMensajes == 15)
-                {
-                    contadorIDsMensajes = 0;
-                }
-                else
-                {
-                    contadorIDsMensajes += 1;
-                }
-
-
+                Task.Factory.StartNew(() => EnviandoMensaje(mens, contador));
             }
             else if(tipoM == "Archivo")
             {
-                //MessageBox.Show("lego a enviar");
-                Console.WriteLine(contadorIDsArchivos.ToString());
-                int copia = contadorIDsArchivos;
-                Task.Factory.StartNew(() => EnviandoArchivo(mens, copia));
-
-                if (contadorIDsArchivos == 15)
-                {
-                    contadorIDsArchivos = 0;
-                }
-                else
-                {
-                    contadorIDsArchivos += 1;
-                }
+                Task.Factory.StartNew(() => EnviandoArchivo(mens, contador));
             }
-            
-
         }
+
         private void EnviandoArchivo(string nombreArchivo, int contador)
         {
             //MessageBox.Show("lego a enviando archivo");
@@ -286,11 +230,14 @@ namespace winproySerialPort
                     {
                         numPart += 1;
                     }
+                    if(f.Length == 0)
+                    {
+                        numPart = 1;
+                    }
                     int porcentaje = Convert.ToInt32((16777215 / numPart) );
                    
                     Trama info = new Trama(0xf, contador, 0, numPart, nombreArchivo);
                     puerto.Write(info.getTramaCompleta(), 0, 1024);
-                    //onLlegoArchivo(nombreArchivo, 0.ToString(), contadorIDsArchivos.ToString(), "10");
                     int readLen = 1014; // leer pedazos de 1024
                     Trama parte;
                     int i = 1;
@@ -300,26 +247,18 @@ namespace winproySerialPort
                         {
                             readLen = (int)len - offset;
                         }
-                        //MessageBox.Show("offset : "+offset.ToString()+" redlen :"+readLen.ToString()+" len:"+len.ToString());
-
-                        //deberia funcionar  ----arreglar
                         offset += f.Read(buffer, 0, readLen);
                        
                         parte = new Trama(0xa, contador, i,0,buffer,readLen);
-                        //Console.WriteLine("--------------");
-                        //Console.WriteLine("i= "+i.ToString());
-                        //Console.WriteLine(parte.getCabezeraString());
-                        //Console.WriteLine("orden int = " + parte.getOrdenInt().ToString() + " orden hex ="+parte.getOrdenHexString());
-                        ///d
+
                         Console.WriteLine("--------------");
                         Console.WriteLine("enviando trama "+parte.getCabezeraString());
                         Console.WriteLine(contador.ToString() + "  " + porcentaje.ToString());
                         Console.WriteLine("--------------");
+
                         puerto.Write(parte.getTramaCompleta(), 0, 1024);
-                        //Console.WriteLine("");
-                        
+
                         onLlegoArchivo("", porcentaje.ToString(), contador.ToString(), "11");
-                        //MessageBox.Show(Encoding.UTF8.GetString(buffer, 0, buffer.Length));
                         buffer = new byte[1014];
                         i++;
                     }
@@ -337,10 +276,7 @@ namespace winproySerialPort
         private void EnviandoMensaje(string mensaje, int contador)
         {
 
-           
-
             int numPart =Convert.ToInt32( (mensaje).Length / tamañoMaximoMensajeDeTrama);
-
             if(numPart < 16777215)
             {
                 if ((mensaje).Length % tamañoMaximoMensajeDeTrama != 0)
@@ -349,7 +285,6 @@ namespace winproySerialPort
                 }
                 //TRAMA DE INFORMACION
                 Trama info = new Trama(0xf, contador, 0, numPart, "");
-                //MessageBox.Show("trama enviada:\n"+ info.getStringCabezeraPartes());
                 puerto.Write(info.getTramaCompleta(), 0, 1024);
 
                 Trama parte;
@@ -357,8 +292,6 @@ namespace winproySerialPort
                 {
                     if (i != numPart)
                     {
-
-                        
                         parte = new Trama(0xb, contador, i,0, mensaje.Substring(1014 * (i - 1), 1014));
                     }
                     else
@@ -366,20 +299,9 @@ namespace winproySerialPort
                         
                         parte = new Trama(0xb, contador, i,0, mensaje.Substring(1014 * (i - 1)));
                     }
-                    //MessageBox.Show("trama enviada:\n" + parte.getStringCabezeraPartes());
                     puerto.Write(parte.getTramaCompleta(), 0, 1024);
-
                 }
-                
             }
-            
-
-
-            //puerto.Write(TramaCabezeraEnvio, 0, TramaCabezeraEnvio.Length);
-            //puerto.Write(TramaDeEnvio, 0, TramaDeEnvio.Length);
-            //puerto.Write(TramaDeRelleno, 0, 1024 - TramaCabezeraEnvio.Length - TramaDeEnvio.Length);
-
-            
         }
 
 
